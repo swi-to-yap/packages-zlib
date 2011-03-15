@@ -26,14 +26,14 @@ nolib::
 zlib4pl.@SO@:	$(ZOBJ)
 		$(LD) $(LDSOFLAGS) -o $@ $(ZOBJ) @LIBS@
 
-install:	$(TARGETS) $(LIBPL)
-		mkdir -p $(DESTDIR)$(PLBASE)/lib/$(PLARCH)
+install:	$(TARGETS) $(addprefix $(srcdir)/, $(LIBPL))
+		mkdir -p $(DESTDIR)$(SOLIB)
 		for f in $(TARGETS); do \
-		  $(INSTALL_PROGRAM) $$f $(DESTDIR)$(PLBASE)/lib/$(PLARCH); \
+		  $(INSTALL_PROGRAM) $(srcdir)/$$f $(DESTDIR)$(PLBASE)/lib/$(PLARCH); \
 		done
-		mkdir -p $(DESTDIR)$(PLBASE)/library
+		mkdir -p $(DESTDIR)$(PLLIBDIR)
 		for f in $(LIBPL); do \
-		  $(INSTALL_DATA) $$f $(DESTDIR)$(PLBASE)/library; \
+		  $(INSTALL_DATA) $(srcdir)/$$f $(DESTDIR)$(PLLIBDIR); \
 		done
 		$(PL) -f none -g make -t halt
 
@@ -51,8 +51,8 @@ pdf-install::
 		$(INSTALL) -m 644 $(DOC).pdf $(DESTDIR)$(PKGDOC)
 
 uninstall::
-		(cd $(PLBASE)/lib/$(PLARCH) && rm -f $(TARGETS))
-		(cd $(PLBASE)/library && rm -f $(LIBPL))
+		(cd $(SOLIBDIR) && rm -f $(TARGETS))
+		(cd $(PLLIBDIR) && rm -f $(LIBPL))
 		$(PL) -f none -g make -t halt
 
 ################################################################
@@ -60,7 +60,7 @@ uninstall::
 ################################################################
 
 check::
-		$(PL) -q -f test_zlib.pl -g test_zlib,halt -t 'halt(1)'
+		(cd $(srcdir) && $(PL) -q -f test_zlib.pl -g test_zlib,halt -t 'halt(1)' )
 
 ################################################################
 # Clean
