@@ -30,6 +30,24 @@ test(gunzip,
 	read_file_to_codes('test_zlib.pl', Codes1),
 	Codes0 == Codes1.
 
+test(gunzip_eof,
+     [ setup(shell('gzip < test_zlib.pl > plunit-tmp.gz')),
+       cleanup(delete_file('plunit-tmp.gz'))
+     ]) :-
+	gzopen('plunit-tmp.gz', read, ZIn),
+	call_cleanup(eof_read_codes(ZIn, Codes0), close(ZIn)),
+	read_file_to_codes('test_zlib.pl', Codes1),
+	Codes0 == Codes1.
+
+eof_read_codes(In, List) :-
+	(   at_end_of_stream(In)
+	->  List = []
+	;   get_code(In, C),
+	    List = [C|Rest],
+	    eof_read_codes(In, Rest)
+	).
+
+
 %	gzip: Can gunzip read our compressed file
 
 test(gzip,
@@ -57,6 +75,18 @@ test(deflate,
 	read_stream_to_codes(ZIn, Codes1),
 	close(ZIn),
 	Codes == Codes1.
+
+test(deflate,					% test empty file
+     [ cleanup(delete_file('plunit-tmp.z'))
+     ]) :-
+	open('plunit-tmp.z', write, Out),
+	zopen(Out, ZOut, []),
+	close(ZOut),
+	open('plunit-tmp.z', read, In),
+	zopen(In, ZIn, []),
+	read_stream_to_codes(ZIn, Codes1),
+	close(ZIn),
+	Codes1 == [].
 
 %	zstream: test compressed stream flushing and processing
 
