@@ -11,12 +11,14 @@
 
 PACKAGE=zlib
 DOC=zlib
-include ../Makefile.defs
 
 LIBPL=		@ZLIB_PLTARGETS@
 TARGETS=	@ZLIB_TARGETS@
 
 ZOBJ=		zlib4pl.o
+
+# start standard Makefile
+include ../Makefile.defs
 
 all:		$(TARGETS)
 
