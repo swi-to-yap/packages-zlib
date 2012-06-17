@@ -1,11 +1,10 @@
-/*  $Id$
-
-    Part of SWI-Prolog
+/*  Part of SWI-Prolog
 
     Author:        Jan Wielemaker
-    E-mail:        wielemak@science.uva.nl
+    E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (C): 2006, University of Amsterdam
+    Copyright (C): 2006-2012, University of Amsterdam
+			      VU University Amsterdam
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Lesser General Public
@@ -36,6 +35,7 @@ install_t install_zlib4pl(void);
 static atom_t ATOM_format;		/* format(Format) */
 static atom_t ATOM_level;		/* level(Int) */
 static atom_t ATOM_close_parent;	/* close_parent(Bool) */
+static atom_t ATOM_multi_part;		/* multi_part(Bool) */
 static atom_t ATOM_gzip;
 static atom_t ATOM_deflate;
 static int debuglevel = 0;
@@ -63,8 +63,10 @@ typedef struct z_context
   IOSTREAM	   *zstream;		/* Compressed stream (I'm handle of) */
   int		    close_parent;	/* close parent on close */
   int		    initialized;	/* did inflateInit()? */
+  int		    multi_part;		/* Multipart gzip file */
   zformat	    format;		/* current format */
   z_stream	    zstate;		/* Zlib state */
+  gz_header	    zhead;		/* Header */
 } z_context;
 
 
@@ -104,13 +106,10 @@ sync_stream(z_context *ctx)
 static ssize_t				/* inflate */
 zread(void *handle, char *buf, size_t size)
 { z_context *ctx = handle;
-  int flush = Z_SYNC_FLUSH;
   int rc;
 
   if ( ctx->zstate.avail_in == 0 )
-  { if ( Sfeof(ctx->stream) )
-    { flush = Z_FINISH;
-    } else
+  { if ( !Sfeof(ctx->stream) )
     { ctx->zstate.next_in  = (Bytef*)ctx->stream->bufp;
       ctx->zstate.avail_in = (long)(ctx->stream->limitp - ctx->stream->bufp);
       DEBUG(1, Sdprintf("Set avail_in to %d\n", ctx->zstate.avail_in));
@@ -127,7 +126,11 @@ zread(void *handle, char *buf, size_t size)
     } else if ( ctx->format == F_DEFLATE )
     { rc = inflateInit(&ctx->zstate);
     } else
-    { rc = inflateInit2(&ctx->zstate, MAX_WBITS+32);
+    { memset(&ctx->zhead, 0, sizeof(ctx->zhead));
+      rc = inflateInit2(&ctx->zstate, MAX_WBITS+32);
+      rc = inflateGetHeader(&ctx->zstate, &ctx->zhead);
+      if ( rc != Z_OK )
+	Sdprintf("inflateGetHeader() failed\n");
     }
     ctx->initialized = TRUE;
     sync_stream(ctx);
@@ -138,21 +141,39 @@ zread(void *handle, char *buf, size_t size)
 
   switch( rc )
   { case Z_OK:
+    { long n = (long)(size - ctx->zstate.avail_out);
+
+      DEBUG(1, Sdprintf("inflate(): Z_OK: %d bytes\n", n));
+
+      if ( n == 0 )
+      { /* If we get here then there was not enough data in the in buffer
+           to decode a single character, but we are not at the end of the
+           stream, so we must read
+	   more from the parent
+	*/
+	DEBUG(1, Sdprintf("Not enough data to decode.  Retrying\n"));
+
+	return zread(handle, buf, size);
+      }
+
+      return n;
+    }
     case Z_STREAM_END:
     { long n = (long)(size - ctx->zstate.avail_out);
 
-      if ( rc == Z_STREAM_END )
-      { DEBUG(1, Sdprintf("Z_STREAM_END: %d bytes\n", n));
-      } else
-      { DEBUG(1, Sdprintf("inflate(): Z_OK: %d bytes\n", n));
-	if (n == 0 && rc != Z_STREAM_END)
-        { /* If we get here then there was not enough data in the in buffer to decode
-             a single character, but we are not at the end of the stream, so we must read
-	     more from the parent */
-          DEBUG(1, Sdprintf("Not enough data to decode.  Retrying\n"));
+      DEBUG(1, Sdprintf("Z_STREAM_END: %d bytes\n", n));
 
-          return zread(handle, buf, size);
-	}
+      if ( n == 0 && ctx->multi_part )
+      { if ( ctx->multi_part == -1 &&
+	     ctx->zhead.done < 0 )
+	  return n;			/* default multi_part and deflate */
+
+	if ( Sfeof(ctx->stream) )
+	  return n;
+
+	DEBUG(1, Sdprintf("Multi-part gzip stream; restarting\n"));
+	ctx->initialized = FALSE;		/* multiple zips */
+	return zread(handle, buf, size);
       }
 
       return n;
@@ -327,6 +348,7 @@ pl_zopen(term_t org, term_t new, term_t options)
   int level = Z_DEFAULT_COMPRESSION;
   IOSTREAM *s, *s2;
   int close_parent = TRUE;
+  int multi_part = -1;			/* default */
 
   while(PL_get_list(tail, head, tail))
   { atom_t name;
@@ -356,6 +378,9 @@ pl_zopen(term_t org, term_t new, term_t options)
     } else if ( name == ATOM_close_parent )
     { if ( !PL_get_bool_ex(arg, &close_parent) )
 	return FALSE;
+    } else if ( name == ATOM_multi_part )
+    { if ( !PL_get_bool_ex(arg, &multi_part) )
+	return FALSE;
     }
   }
   if ( !PL_get_nil_ex(tail) )
@@ -365,6 +390,7 @@ pl_zopen(term_t org, term_t new, term_t options)
     return FALSE;			/* Error */
   ctx = alloc_zcontext(s);
   ctx->close_parent = close_parent;
+  ctx->multi_part = multi_part;
   ctx->format = fmt;
   if ( (s->flags & SIO_OUTPUT) )
   { int rc;
@@ -423,6 +449,7 @@ install_zlib4pl(void)
   ATOM_close_parent = PL_new_atom("close_parent");
   ATOM_gzip	    = PL_new_atom("gzip");
   ATOM_deflate	    = PL_new_atom("deflate");
+  ATOM_multi_part   = PL_new_atom("multi_part");
 
   PL_register_foreign("zopen",  3, pl_zopen,  0);
 #ifdef O_DEBUG

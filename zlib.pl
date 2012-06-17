@@ -37,7 +37,18 @@
 	  ]).
 :- use_module(library(shlib)).
 :- use_module(library(error)).
+:- use_module(library(apply)).
 
+:- predicate_options(zopen/3, 3,
+		     [ format(oneof([gzip,deflate])),
+		       multi_part(boolean),
+		       close_parent(boolean),
+		       level(between(0,9))
+		     ]).
+:- predicate_options(gzopen/4, 4,
+		     [ pass_to(zopen/3, 3),
+		       pass_to(open/4, 4)
+		     ]).
 
 /** <module> Zlib wrapper for SWI-Prolog
 
@@ -66,7 +77,7 @@ gzopen(File, Mode, Stream) :-
 
 gzopen(File, Mode, Stream, Options) :-
 	must_be(oneof([read,write,append]), Mode),
-	zoptions(Options, ZOptions, OpenOptions),
+	partition(zoption, Options, ZOptions, OpenOptions),
 	open(File, Mode, Stream0, OpenOptions),
 	zopen(Stream0, Stream,
 	      [ format(gzip),
@@ -74,12 +85,6 @@ gzopen(File, Mode, Stream, Options) :-
 	      | ZOptions
 	      ]).
 
-zoptions([], [], []).
-zoptions([H|T], [H|TZ], TO) :-
-	zoption(H), !,
-	zoptions(T, TZ, TO).
-zoptions([H|T], TZ, [H|TO]) :-
-	zoptions(T, TZ, TO).
-
 zoption(format(_)).
+zoption(multi_part(_)).
 zoption(level(_)).

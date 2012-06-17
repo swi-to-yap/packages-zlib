@@ -26,12 +26,12 @@ nolib::
 		@echo "WARNING: Could not find zlib library; skipped"
 
 zlib4pl.@SO@:	$(ZOBJ)
-		$(LD) -o $@ $(ZOBJ) @LIBS@ $(LDSOFLAGS)
+		$(LD) $(LDSOFLAGS) -o $@ $(ZOBJ) @LIBS@ $(LIBPLSO)
 
 install:	$(TARGETS) $(addprefix $(srcdir)/, $(LIBPL))
 		mkdir -p $(DESTDIR)$(SOLIBDIR)
 		for f in $(TARGETS); do \
-		  [ "$f" = nolib ] || $(INSTALL_PROGRAM) $$f $(DESTDIR)$(SOLIBDIR); \
+		  [ "$$f" = nolib ] || $(INSTALL_PROGRAM) $$f $(DESTDIR)$(SOLIBDIR); \
 		done
 		mkdir -p $(DESTDIR)$(PLLIBDIR)
 		for f in $(LIBPL); do \
@@ -61,8 +61,13 @@ uninstall::
 # Testing
 ################################################################
 
-check::
+check:		$(srcdir)/test_multipart.gz
 		(cd $(srcdir) && $(PL) -q -f test_zlib.pl -g test_zlib,halt -t 'halt(1)' )
+
+test_multipart.gz:
+		echo "Part1" | gzip > $(srcdir)/$@
+		echo "Part2" | gzip >> $(srcdir)/$@
+
 
 ################################################################
 # Clean
@@ -74,5 +79,6 @@ clean:
 distclean:	clean
 		rm -f $(TARGETS) config.cache config.h config.status Makefile
 		rm -f $(DOC).aux $(DOC).log $(DOC).out $(DOC).toc
+		rm -f test_multipart.gz
 		rm -rf html
 		rm -rf autom4te.cache
