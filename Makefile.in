@@ -26,7 +26,7 @@ nolib::
 		@echo "WARNING: Could not find zlib library; skipped"
 
 zlib4pl.@SO@:	$(ZOBJ)
-		$(LD) $(LDSOFLAGS) -o $@ $(ZOBJ) @LIBS@ $(LIBPLSO)
+		$(LD) $(LDSOFLAGS) -o $@ $(ZOBJ) @LIBS@ @ZLIBS@ $(LIBPLSO)
 
 install:	$(TARGETS) $(addprefix $(srcdir)/, $(LIBPL))
 		mkdir -p $(DESTDIR)$(SOLIBDIR)
@@ -56,6 +56,17 @@ uninstall::
 		(cd $(SOLIBDIR) && rm -f $(TARGETS))
 		(cd $(PLBASE)/library && rm -f $(LIBPL))
 		$(MKINDEX)
+
+################################################################
+# Documentation
+################################################################
+
+TEXEXTRA=	archive4pl.tex
+$(TEX):		$(TEXEXTRA)
+
+archive4pl.tex:	$(srcdir)/archive.pl
+		$(PLTOTEX) --out=$@ --section 'library(archive)'
+
 
 ################################################################
 # Testing
