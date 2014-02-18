@@ -39,8 +39,6 @@ install:	$(TARGETS) $(addprefix $(srcdir)/, $(LIBPL))
 		done
 		$(MKINDEX)
 
-install-examples:
-
 ln-install::
 		$(MAKE) INSTALL_DATA="../ln-install" INSTALL_PROGRAM="../ln-install" install
 
