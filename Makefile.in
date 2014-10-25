@@ -28,10 +28,10 @@ nolib::
 		@echo "WARNING: Could not find zlib library; skipped"
 
 zlib4pl.@SO@:	$(ZOBJ)
-		$(LD) $(LDSOFLAGS) -o $@ $(ZOBJ) @ZLIBS@ $(LIBPLSO)
+		$(LD) $(LDSOFLAGS) -o $@ $(ZOBJ) @ZLIB_LIBS@ $(LIBPLSO)
 
 install:	$(TARGETS) $(addprefix $(srcdir)/, $(LIBPL))
-		mkdir -p $(DESTDIR)$(SOLIBDIR)
+			mkdir -p $(DESTDIR)$(SOLIBDIR)
 		for f in $(TARGETS); do \
 		  [ "$$f" = nolib ] || $(INSTALL_PROGRAM) $$f $(DESTDIR)$(SOLIBDIR); \
 		done

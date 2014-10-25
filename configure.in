@@ -21,9 +21,9 @@ if test "$yap_cv_zlib" != no;
 then
 AC_SUBST(ZLIB_TARGETS)
 AC_SUBST(ZLIB_PLTARGETS)
-AC_SUBST(ZLIBS)
-AC_SUBST(ZCPPFLAGS)
-AC_SUBST(ZLDFLAGS)
+AC_SUBST(ZLIB_LIBS)
+AC_SUBST(ZLIB_CPPFLAGS)
+AC_SUBST(ZLIB_LDFLAGS)
 
 old_inc="$CPPFLAGS"
 old_libs="$LDFLAGS"
@@ -41,7 +41,7 @@ m4_include([../ac_swi_c.m4])
 
 AC_CHECK_HEADERS(zlib.h zutil.h)
 AC_CHECK_LIB(z, zlibVersion,
-	     ZLIBS="$LIBS -lz"
+	     ZLIB_LIBS="$LIBS -lz"
 	     ZLIB=yes,
 	     ZLIB=no)
 
