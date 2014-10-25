@@ -6,9 +6,34 @@ AC_PREREQ([2.50])
 AC_CONFIG_HEADER(config.h)
 ])
 
+AC_ARG_WITH(zlib,
+	[ --with-zlib[=DIR]              zlib compression library],
+	if test "$withval" = yes; then
+	    yap_cv_zlib=yes
+	elif test "$withval" = no; then
+	    yap_cv_zlib=no
+	else
+	    yap_cv_zlib=$withval
+	fi,
+	[yap_cv_zlib=yes])
+
+if test "$yap_cv_zlib" != no;
+then
 AC_SUBST(ZLIB_TARGETS)
 AC_SUBST(ZLIB_PLTARGETS)
 AC_SUBST(ZLIBS)
+AC_SUBST(ZCPPFLAGS)
+AC_SUBST(ZLDFLAGS)
+
+old_inc="$CPPFLAGS"
+old_libs="$LDFLAGS"
+ZLIB_TARGETS=nolib
+
+if test "yap_cv_zlib" != yes;
+then
+   CPPFLAGS+=" -I $yap_cv_zlib/include"
+   LDFLAGS+=" -L $yap_cv_zlib/lib"
+fi
 
 m4_ifdef([HAS_TOP],[m4_ignore],[   
 m4_include([../ac_swi_c.m4])
@@ -21,6 +46,12 @@ AC_CHECK_LIB(z, zlibVersion,
 	     ZLIB=no)
 
 if test "$ZLIB" = yes; then
+   ZLIB_CPPFLAGS="$CPPFLAGS"
+   ZLIB_LDFLAGS="$LDFLAGS"
+
+  CPPFLAGS="$old_cppflags"
+  LDFLAGS="$old_ldflags"
+
   ZLIB_TARGETS="zlib4pl.$SO"
   ZLIB_PLTARGETS=zlib.pl
 else
@@ -32,7 +63,8 @@ else
 # Most Unix/Linux distributions are shipped with binaries.  Make
 # sure to have the development library installed.
 ##################################################################
-EOF
+EOF 
+fi
 fi
 
 m4_ifdef([HAS_TOP],[m4_ignore],[   
