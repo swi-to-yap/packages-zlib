@@ -63,11 +63,11 @@ uninstall::
 # Documentation
 ################################################################
 
-TEXEXTRA=	archive4pl.tex
+TEXEXTRA=	zlib4pl.tex
 $(TEX):		$(TEXEXTRA)
 
-archive4pl.tex:	$(srcdir)/archive.pl
-		$(PLTOTEX) --out=$@ --section 'library(archive)'
+zlib4pl.tex:	$(srcdir)/zlib.pl
+		$(PLTOTEX) --out=$@ --section 'library(zlib)'
 
 
 ################################################################
