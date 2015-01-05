@@ -49,7 +49,7 @@
 		     ]).
 
 /** <module> Zlib wrapper for SWI-Prolog
-@ingroup SWILibrary
+@ingroup swi
 
 Read/write compressed data based on the zlib library.
 
